@@ -1009,7 +1009,7 @@ def main():
     if sys.argv[1] == "today":
         game_data = pd.read_csv(f"/Users/dannycoleman/desktop/valleycats/trackmancsv/{todays_opponent}-{today_month}.csv")
         
-    else:
+    elif sys.argv[1] == "":
         game_data = pd.read_csv(f"/Users/dannycoleman/desktop/valleycats/trackmancsv/{yesterdays_opponent}-{yesterday_month}.csv")
         
 

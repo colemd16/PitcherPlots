@@ -1005,12 +1005,16 @@ def main():
         yesterdays_opponent = yesterdays_game.iloc[0]['opponent']
     except:
         print("No game yesterday")
-    
-    if sys.argv[1] == "today":
-        game_data = pd.read_csv(f"/Users/dannycoleman/desktop/valleycats/trackmancsv/{todays_opponent}-{today_month}.csv")
-        
-    elif sys.argv[1] == "":
+    game_today = input("Is this program running day of game occuring?(y/n): ").strip().lower()
+
+    if game_today == 'no' or game_today == 'n':
         game_data = pd.read_csv(f"/Users/dannycoleman/desktop/valleycats/trackmancsv/{yesterdays_opponent}-{yesterday_month}.csv")
+
+    elif game_today == 'yes' or game_today == 'y':
+        game_data = pd.read_csv(f"/Users/dannycoleman/desktop/valleycats/trackmancsv/{todays_opponent}-{today_month}.csv")
+    
+    else:
+        print("Must be (y)es or (n)o! Try again, Bye")
         
 
     pitch_data = game_data[game_data['PitcherTeam']=='TRI_VAL']

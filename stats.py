@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import sys
 
-def plot_season_pitches(fig, ax, pitch_data, pitcher):
+def plot_season_pitches(fig, ax, pitch_data, pitcher, yesterday_month, yesterdays_opponent):
 
     draw_strike_zone(ax)
 
@@ -15,6 +15,7 @@ def plot_season_pitches(fig, ax, pitch_data, pitcher):
     ax.plot([], [], 'o', color='green', label='Slider')
     ax.plot([], [], 'o', color='purple', label='Changeup')
     ax.plot([], [], 'o', color='black', label='Splitter')
+    ax.plot([], [], 'o', color='gray', label='Undefined')
     ax.plot([], [], '^', color='pink', label='2-2 Count')
     ax.plot([], [], 'v', color='#39FF14', label='1-1 Count')
 
@@ -25,6 +26,7 @@ def plot_season_pitches(fig, ax, pitch_data, pitcher):
     sl = 0
     ch = 0
     spl = 0
+    und = 0
     in_zone = 0
     out_of_zone = 0
     fb_whiff = 0
@@ -136,15 +138,38 @@ def plot_season_pitches(fig, ax, pitch_data, pitcher):
                 ax.plot(side, height, '^', color='pink', markersize=2.5)
             if balls == 1 and strikes == 1:
                 ax.plot(side, height, 'v', color='#39FF14', markersize=2.5)
+        
+        else:
+            if -.708 <= side <= .708 and 1.5 <= height <= 3.5:
+                ax.plot(side, height, 'o', color='gray', markersize=8)
+                
+                in_zone += 1
+            else:
+                ax.plot(side, height, 'o', color='gray', markerfacecolor='none',markeredgecolor='gray', markersize=8)
+                
+                out_of_zone += 1
+            if pitch_result == 'StrikeSwinging':
+                und += 1
+
+            if balls == 2 and strikes == 2:
+                ax.plot(side, height, '^', color='pink', markersize=2.5)
+            if balls == 1 and strikes == 1:
+                ax.plot(side, height, 'v', color='#39FF14', markersize=2.5)
 
     #calculate percentages
-    fb_per = round((fb/total_pitches)*100,2)
-    cb_per = round((cb/total_pitches)*100,2)
-    sl_per = round((sl/total_pitches)*100,2)
-    ch_per = round((ch/total_pitches)*100,2)
-    spl_per = round((spl/total_pitches)*100,2)
-    in_zone_per = round((in_zone/total_pitches)*100,2)
-    out_of_zone_per = round((out_of_zone/total_pitches)*100,2)
+    if total_pitches > 0:
+        fb_per = round((fb/total_pitches)*100,2)
+        cb_per = round((cb/total_pitches)*100,2)
+        sl_per = round((sl/total_pitches)*100,2)
+        ch_per = round((ch/total_pitches)*100,2)
+        spl_per = round((spl/total_pitches)*100,2)
+        und_per = round((und/total_pitches)*100,2)
+        in_zone_per = round((in_zone/total_pitches)*100,2)
+        out_of_zone_per = round((out_of_zone/total_pitches)*100,2)
+    else:
+        fb_per = cb_per = sl_per = ch_per = spl_per = und_per = 0
+        in_zone_per = out_of_zone_per = 0   
+    
     try:
         fb_whiff_per = round((fb_whiff/len(fb_data))*100,2)
     except:
@@ -171,7 +196,7 @@ def plot_season_pitches(fig, ax, pitch_data, pitcher):
         spl_whiff_per = 0
 
     fig.text(0.02,.60,
-        f"Pitch Usage:\nFB: {fb_per}%\nCB: {cb_per}%\nSL: {sl_per}%\nCH: {ch_per}%\nSPL: {spl_per}%",
+        f"Pitch Usage:\nFB: {fb_per:.2f}%\nCB: {cb_per:.2f}%\nSL: {sl_per:.2f}%\nCH: {ch_per:.2f}%\nSPL: {spl_per:.2f}%",
         va='center',
         ha='left',
         fontsize=15,
@@ -181,7 +206,7 @@ def plot_season_pitches(fig, ax, pitch_data, pitcher):
         color='black')
     
     fig.text(0.02,0.02,
-        f"In-Zone: {in_zone_per}%\nOut-Of-Zone: {out_of_zone_per}%",
+        f"In-Zone: {in_zone_per:.2f}%\nOut-Of-Zone: {out_of_zone_per:.2f}%",
         va='bottom',
         ha='left',
         fontsize=15,
@@ -201,7 +226,7 @@ def plot_season_pitches(fig, ax, pitch_data, pitcher):
         color='black')
 
     fig.text(0.02,0.30,
-        f"Whiff %:\nFB: {fb_whiff_per}%\nCB: {cb_whiff_per}%\nSL: {sl_whiff_per}%\nCH: {ch_whiff_per}%\nSPL: {spl_whiff_per}%",
+        f"Whiff %:\nFB: {fb_whiff_per:.2f}%\nCB: {cb_whiff_per:.2f}%\nSL: {sl_whiff_per:.2f}%\nCH: {ch_whiff_per:.2f}%\nSPL: {spl_whiff_per:.2f}%",
         va='center',
         ha='left',
         fontsize=15,
@@ -210,9 +235,18 @@ def plot_season_pitches(fig, ax, pitch_data, pitcher):
         bbox=dict(facecolor='white',edgecolor='gray',boxstyle='round'),
         color='black')
     
-    first, last = pitcher.split(" ")
-    pitcher = f"{first}{last}"
-    plt.savefig(f"{pitcher}_SeasonNumbers.pdf")
+    try:
+        first, last = pitcher.split(" ")
+        pitcher = f"{first.strip()}{last.strip()}"
+    except:
+        first, last = pitcher.split("  ")
+        pitcher = f"{first.strip()}{last.strip()}"
+    dir = Path(f"/Users/dannycoleman/desktop/valleycats/pitcher_plots/{pitcher}/{yesterday_month}_{yesterdays_opponent}")
+    try:
+        plt.savefig(f"{dir}/{pitcher}_SeasonNumbers.pdf")
+    except:
+        dir.mkdir(parents=True, exist_ok=True)
+        plt.savefig(f"{dir}/{pitcher}_SeasonNumbers.pdf")
 
     plt.close(fig)
 
@@ -347,13 +381,18 @@ def plot_game_pitches(fig, ax, pitch_data, pitcher,yesterday_month, today_month,
                 ax.plot(side, height, 'v', color='#00FFFF', markersize=5.5)
 
     #calculate percentages
-    fb_per = round((fb/total_pitches)*100,2)
-    cb_per = round((cb/total_pitches)*100,2)
-    sl_per = round((sl/total_pitches)*100,2)
-    ch_per = round((ch/total_pitches)*100,2)
-    spl_per = round((spl/total_pitches)*100,2)
-    in_zone_per = round((in_zone/total_pitches)*100,2)
-    out_of_zone_per = round((out_of_zone/total_pitches)*100,2)
+    
+    if total_pitches > 0:
+        fb_per = round((fb/total_pitches)*100,2)
+        cb_per = round((cb/total_pitches)*100,2)
+        sl_per = round((sl/total_pitches)*100,2)
+        ch_per = round((ch/total_pitches)*100,2)
+        spl_per = round((spl/total_pitches)*100,2)
+        in_zone_per = round((in_zone/total_pitches)*100,2)
+        out_of_zone_per = round((out_of_zone/total_pitches)*100,2)
+    else:
+        fb_per = cb_per = sl_per = ch_per = spl_per = 0
+        in_zone_per = out_of_zone_per = 0 
     try:
         fb_whiff_per = round((fb_whiff/len(fb_data))*100,2)
     except:
@@ -380,7 +419,7 @@ def plot_game_pitches(fig, ax, pitch_data, pitcher,yesterday_month, today_month,
         spl_whiff_per = 0
 
     fig.text(0.02,.60,
-        f"Pitch Usage:\nFB: {fb_per}%\nCB: {cb_per}%\nSL: {sl_per}%\nCH: {ch_per}%\nSPL: {spl_per}%",
+        f"Pitch Usage:\nFB: {fb_per:.2f}%\nCB: {cb_per:.2f}%\nSL: {sl_per:.2f}%\nCH: {ch_per:.2f}%\nSPL: {spl_per:.2f}%",
         va='center',
         ha='left',
         fontsize=15,
@@ -390,7 +429,7 @@ def plot_game_pitches(fig, ax, pitch_data, pitcher,yesterday_month, today_month,
         color='black')
     
     fig.text(0.02,0.02,
-        f"In-Zone: {in_zone_per}%\nOut-Of-Zone: {out_of_zone_per}%",
+        f"In-Zone: {in_zone_per:.2f}%\nOut-Of-Zone: {out_of_zone_per:.2f}%",
         va='bottom',
         ha='left',
         fontsize=15,
@@ -410,7 +449,7 @@ def plot_game_pitches(fig, ax, pitch_data, pitcher,yesterday_month, today_month,
         color='black')
 
     fig.text(0.02,0.30,
-        f"Whiff %:\nFB: {fb_whiff_per}%\nCB: {cb_whiff_per}%\nSL: {sl_whiff_per}%\nCH: {ch_whiff_per}%\nSPL: {spl_whiff_per}%",
+        f"Whiff %:\nFB: {fb_whiff_per:.2f}%\nCB: {cb_whiff_per:.2f}%\nSL: {sl_whiff_per:.2f}%\nCH: {ch_whiff_per:.2f}%\nSPL: {spl_whiff_per:.2f}%",
         va='center',
         ha='left',
         fontsize=15,
@@ -418,13 +457,13 @@ def plot_game_pitches(fig, ax, pitch_data, pitcher,yesterday_month, today_month,
         fontweight='bold',
         bbox=dict(facecolor='white',edgecolor='gray',boxstyle='round'),
         color='black')
-    print(pitcher)
+    
     try:
         first, last = pitcher.split(" ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
     except:
         first, last = pitcher.split("  ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
     dir = Path(f"/Users/dannycoleman/desktop/valleycats/pitcher_plots/{pitcher}/{yesterday_month}_{yesterdays_opponent}")
     try:
         plt.savefig(f"{dir}/{pitcher}_vs_{yesterdays_opponent}.pdf")
@@ -495,7 +534,7 @@ def plot_fb(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
     out_of_zone_per = 100 - in_zone_per
     
     fig.text(0.02,0.02,
-        f"In-Zone: {in_zone_per}%\nOut-Of-Zone: {out_of_zone_per}%",
+        f"In-Zone: {in_zone_per:.2f}%\nOut-Of-Zone: {out_of_zone_per:.2f}%",
         va='bottom',
         ha='left',
         fontsize=15,
@@ -515,7 +554,7 @@ def plot_fb(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
         color='black')
 
     fig.text(0.02,0.50,
-        f"Whiff %:\nFB: {fb_whiff_per}%",
+        f"Whiff %:\nFB: {fb_whiff_per:.2f}%",
         va='center',
         ha='left',
         fontsize=15,
@@ -526,10 +565,10 @@ def plot_fb(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
     
     try:
         first, last = pitcher.split(" ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
     except:
         first, last = pitcher.split("  ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
     dir = Path(f"/Users/dannycoleman/desktop/valleycats/pitcher_plots/{pitcher}/{yesterday_month}_{yesterdays_opponent}")
     try:
         plt.savefig(f"{dir}/{pitcher}_FB_Whiff.pdf")
@@ -600,7 +639,7 @@ def plot_cb(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
     out_of_zone_per = 100 - in_zone_per
     
     fig.text(0.02,0.02,
-        f"In-Zone: {in_zone_per}%\nOut-Of-Zone: {out_of_zone_per}%",
+        f"In-Zone: {in_zone_per:.2f}%\nOut-Of-Zone: {out_of_zone_per:.2f}%",
         va='bottom',
         ha='left',
         fontsize=15,
@@ -620,7 +659,7 @@ def plot_cb(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
         color='black')
 
     fig.text(0.02,0.50,
-        f"Whiff %:\nCB: {cb_whiff_per}%",
+        f"Whiff %:\nCB: {cb_whiff_per:.2f}%",
         va='center',
         ha='left',
         fontsize=15,
@@ -631,10 +670,10 @@ def plot_cb(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
     
     try:
         first, last = pitcher.split(" ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
     except:
         first, last = pitcher.split("  ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
 
     dir = Path(f"/Users/dannycoleman/desktop/valleycats/pitcher_plots/{pitcher}/{yesterday_month}_{yesterdays_opponent}")
     try:
@@ -706,7 +745,7 @@ def plot_sl(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
     out_of_zone_per = 100 - in_zone_per
     
     fig.text(0.02,0.02,
-        f"In-Zone: {in_zone_per}%\nOut-Of-Zone: {out_of_zone_per}%",
+        f"In-Zone: {in_zone_per:.2f}%\nOut-Of-Zone: {out_of_zone_per:.2f}%",
         va='bottom',
         ha='left',
         fontsize=15,
@@ -726,7 +765,7 @@ def plot_sl(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
         color='black')
 
     fig.text(0.02,0.50,
-        f"Whiff %:\nSL: {sl_whiff_per}%",
+        f"Whiff %:\nSL: {sl_whiff_per:.2f}%",
         va='center',
         ha='left',
         fontsize=15,
@@ -737,10 +776,10 @@ def plot_sl(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
     
     try:
         first, last = pitcher.split(" ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
     except:
         first, last = pitcher.split("  ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
 
     dir = Path(f"/Users/dannycoleman/desktop/valleycats/pitcher_plots/{pitcher}/{yesterday_month}_{yesterdays_opponent}")
     try:
@@ -812,7 +851,7 @@ def plot_ch(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
     out_of_zone_per = 100 - in_zone_per
     
     fig.text(0.02,0.02,
-        f"In-Zone: {in_zone_per}%\nOut-Of-Zone: {out_of_zone_per}%",
+        f"In-Zone: {in_zone_per:.2f}%\nOut-Of-Zone: {out_of_zone_per:.2f}%",
         va='bottom',
         ha='left',
         fontsize=15,
@@ -832,7 +871,7 @@ def plot_ch(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
         color='black')
 
     fig.text(0.02,0.50,
-        f"Whiff %:\nCH: {ch_whiff_per}%",
+        f"Whiff %:\nCH: {ch_whiff_per:.2f}%",
         va='center',
         ha='left',
         fontsize=15,
@@ -843,10 +882,10 @@ def plot_ch(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterda
     
     try:
         first, last = pitcher.split(" ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
     except:
         first, last = pitcher.split("  ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
 
     dir = Path(f"/Users/dannycoleman/desktop/valleycats/pitcher_plots/{pitcher}/{yesterday_month}_{yesterdays_opponent}")
     try:
@@ -918,7 +957,7 @@ def plot_spl(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterd
     out_of_zone_per = 100 - in_zone_per
     
     fig.text(0.02,0.02,
-        f"In-Zone: {in_zone_per}%\nOut-Of-Zone: {out_of_zone_per}%",
+        f"In-Zone: {in_zone_per:.2f}%\nOut-Of-Zone: {out_of_zone_per:.2f}%",
         va='bottom',
         ha='left',
         fontsize=15,
@@ -938,7 +977,7 @@ def plot_spl(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterd
         color='black')
 
     fig.text(0.02,0.50,
-        f"Whiff %:\nSPL: {spl_whiff_per}%",
+        f"Whiff %:\nSPL: {spl_whiff_per:.2f}%",
         va='center',
         ha='left',
         fontsize=15,
@@ -949,12 +988,12 @@ def plot_spl(fig, ax, pitch_data, pitcher, yesterday_month, today_month, yesterd
     
     try:
         first, last = pitcher.split(" ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
     except:
         first, last = pitcher.split("  ")
-        pitcher = f"{first}{last}"
+        pitcher = f"{first.strip()}{last.strip()}"
         
-    dir = Path(f"/Users/dannycoleman/desktop/valleycats/pitcher_plots{pitcher}/{yesterday_month}_{yesterdays_opponent}")
+    dir = Path(f"/Users/dannycoleman/desktop/valleycats/pitcher_plots/{pitcher}/{yesterday_month}_{yesterdays_opponent}")
     try:
         plt.savefig(f"{dir}/{pitcher}_SPL_Whiff.pdf")
     except:
@@ -986,6 +1025,7 @@ def main():
     #------------------------------------------------------------#
 
     # --- Import All Necessary Data --- #
+    
     today_full = datetime.today().strftime("%Y-%m-%d")
     yesterday = (datetime.today() - timedelta(days=1))
     yesterday_full = yesterday.strftime("%Y-%m-%d")
@@ -1015,7 +1055,6 @@ def main():
     
     else:
         print("Must be (y)es or (n)o! Try again, Bye")
-        
 
     pitch_data = game_data[game_data['PitcherTeam']=='TRI_VAL']
     bat_data = game_data[game_data['BatterTeam']=='TRI_VAL']
@@ -1031,7 +1070,7 @@ def main():
     unique_pitchers = season_data['Pitcher'].unique()
     
     #------------------------------------------------------------#
-
+    
     # --- Individual Game Pitching Report --- #
     unique_pitchers = pitch_data['Pitcher'].unique()
     for pitcher in unique_pitchers:
@@ -1040,25 +1079,24 @@ def main():
         fig.suptitle("Pitcher Game Report", fontweight='bold', fontsize=16, x=.5,y=.98, ha='center')
         last, first = pitcher.split(", ")
         pitcher = f"{first} {last}"
-        ax.set_title(f"{pitcher} vs {yesterdays_opponent} | {yesterday_month}", fontfamily='Arial', pad=8, loc='center')
+        ax.set_title(f"{pitcher} vs {yesterdays_opponent} | {yesterday_month}", fontfamily='Arial', pad=10, loc='center')
         plot_game_pitches(fig, ax, pitcher_data, pitcher, yesterday_month, today_month, yesterdays_opponent)
-
+    
     #------------------------------------------------------------#
     """
     # --- Individual Season Pitching Report --- #
-
     for pitcher in unique_pitchers:
         pitcher_season_data = season_data[season_data['Pitcher']==pitcher]
-        fig, ax = plt.subplots(figsize=(7,7), facecolor='lightgray', constrained_layout=True)
+        fig, ax = plt.subplots(figsize=(7,7), facecolor='whitesmoke', constrained_layout=True)
         fig.suptitle("Season Pitcher Data", fontweight='bold',fontsize=16, x=.5, y=.98, ha='center')
         last, first = pitcher.split(", ")
-        pitcher = f"{first} {last}"
-        print(pitcher)
-        ax.set_title(f"{pitcher} as of {today_month}", fontfamily='Arial', pad=45, loc='center')
-        plot_season_pitches(fig, ax, pitcher_season_data, pitcher)
-
-    #------------------------------------------------------------#
+        pitcher_name = f"{first} {last}"
+        print(pitcher_name)
+        ax.set_title(f"{pitcher_name} as of {today_month}", fontfamily='Arial', pad=10, loc='center')
+        plot_season_pitches(fig, ax, pitcher_season_data, pitcher_name, yesterday_month, yesterday_month)
     """
+    #------------------------------------------------------------#
+    
     # --- Individual Whiff Rates by Pitch (Season) --- #
 
     # --- FB --- #
